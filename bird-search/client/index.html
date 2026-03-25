@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bird Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sky: #d4eeff;
+    --deep-sky: #a8d8f0;
+    --grass: #4a9e4a;
+    --dark-grass: #2d6b2d;
+    --bark: #7a4f2d;
+    --leaf: #5cb85c;
+    --p1: #87CEEB;
+    --p1-dark: #4a9ec0;
+    --p2: #DD1717;
+    --p2-dark: #8b0000;
+    --gold: #f5c542;
+    --cream: #fdf6e3;
+    --ink: #1a1a1a;
+    --border: #2d2d2d;
+    --cell: 34px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--sky);
+    background-image:
+      radial-gradient(ellipse at 20% 30%, #fff 0%, transparent 30%),
+      radial-gradient(ellipse at 70% 15%, #fff 0%, transparent 25%),
+      radial-gradient(ellipse at 50% 60%, var(--deep-sky) 0%, transparent 60%);
+    font-family: 'VT323', monospace;
+    min-height: 100vh;
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* LOBBY */
+  #lobby {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 24px;
+  }
+
+  .title-block {
+    text-align: center;
+    position: relative;
+  }
+
+  .title-main {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 3rem;
+    color: var(--dark-grass);
+    text-shadow:
+      3px 3px 0 var(--bark),
+      -1px -1px 0 var(--bark);
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+
+  .title-birds {
+    font-size: 3rem;
+    display: block;
+    animation: flutter 2s ease-in-out infinite;
+  }
+
+  @keyframes flutter {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-8px) rotate(2deg); }
+  }
+
+  .subtitle {
+    font-size: 1.6rem;
+    color: var(--bark);
+    margin-top: 8px;
+    letter-spacing: 2px;
+  }
+
+  .lobby-card {
+    background: var(--cream);
+    border: 3px solid var(--border);
+    border-radius: 4px;
+    padding: 32px 40px;
+    box-shadow: 6px 6px 0 var(--border);
+    min-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .lobby-card h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.85rem;
+    text-align: center;
+    color: var(--dark-grass);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  input[type="text"] {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8rem;
+    padding: 10px 14px;
+    border: 3px solid var(--border);
+    background: white;
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    outline: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--grass);
+    box-shadow: 0 0 0 2px rgba(74,158,74,0.3);
+  }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    padding: 10px 18px;
+    border: 3px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.08s;
+    box-shadow: 4px 4px 0 var(--border);
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+  }
+
+  .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--border); }
+
+  .btn-green { background: var(--grass); color: white; }
+  .btn-green:hover { background: var(--dark-grass); }
+  .btn-red { background: var(--p2); color: white; }
+  .btn-red:hover { background: var(--p2-dark); }
+  .btn-sky { background: var(--p1); color: var(--ink); }
+  .btn-sky:hover { background: var(--p1-dark); color: white; }
+  .btn-gold { background: var(--gold); color: var(--ink); }
+  .btn-gold:hover { background: #d4a800; }
+  .btn-sm { font-size: 0.55rem; padding: 6px 12px; }
+
+  .divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 1.2rem;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: #ddd;
+  }
+
+  .status-msg {
+    font-size: 1.3rem;
+    text-align: center;
+    padding: 10px;
+    border-radius: 3px;
+    min-height: 36px;
+  }
+
+  .status-wait { background: #fff3cd; color: #856404; border: 2px solid #ffc107; }
+  .status-error { background: #f8d7da; color: #842029; border: 2px solid #f5c2c7; }
+  .status-ok { background: #d1e7dd; color: #0f5132; border: 2px solid #badbcc; }
+
+  /* GAME */
+  #game { display: none; flex-direction: column; align-items: center; padding: 12px 8px; gap: 10px; }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 1280px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .game-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.1rem;
+    color: var(--dark-grass);
+    text-shadow: 2px 2px 0 var(--bark);
+  }
+
+  .turn-banner {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    padding: 8px 16px;
+    border: 3px solid var(--border);
+    box-shadow: 3px 3px 0 var(--border);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* PLAYER CARDS */
+  .player-cards {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 1280px;
+  }
+
+  .player-card {
+    flex: 1;
+    border: 3px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--cream);
+    box-shadow: 3px 3px 0 var(--border);
+    position: relative;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .player-card.active-turn {
+    border-color: var(--grass);
+    box-shadow: 3px 3px 0 var(--grass), 0 0 0 2px var(--grass);
+    background: #f0fff0;
+  }
+
+  .player-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .player-info { flex: 1; }
+
+  .player-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+  }
+
+  .player-stats {
+    font-size: 1.1rem;
+    color: #555;
+    margin-top: 2px;
+  }
+
+  .active-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    background: var(--grass);
+    color: white;
+    padding: 3px 6px;
+    border: 2px solid var(--border);
+    position: absolute;
+    top: -12px;
+    right: 8px;
+  }
+
+  /* GRIDS */
+  .grids-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .grid-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .grid-panel-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    color: var(--ink);
+    background: var(--cream);
+    border: 2px solid var(--border);
+    padding: 4px 12px;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+
+  .grid-canvas-wrapper {
+    position: relative;
+  }
+
+  canvas.grid-canvas {
+    border: 3px solid var(--border);
+    box-shadow: 4px 4px 0 var(--border);
+    cursor: pointer;
+    display: block;
+  }
+
+  canvas.grid-canvas.inactive {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+
+  /* WINNER OVERLAY */
+  #winner-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #winner-overlay.show { display: flex; }
+
+  .winner-box {
+    background: var(--cream);
+    border: 5px solid var(--border);
+    padding: 40px 50px;
+    text-align: center;
+    box-shadow: 10px 10px 0 var(--border);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 480px;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+    to { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  .winner-birds { font-size: 4rem; animation: flutter 1s ease-in-out infinite; }
+
+  .winner-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.1rem;
+    color: var(--dark-grass);
+    margin: 12px 0 6px;
+    text-shadow: 2px 2px 0 var(--bark);
+  }
+
+  .winner-sub {
+    font-size: 1.8rem;
+    color: var(--bark);
+    margin-bottom: 20px;
+  }
+
+  /* WAITING SCREEN */
+  #waiting-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .waiting-bird {
+    font-size: 5rem;
+    animation: flutter 1.5s ease-in-out infinite;
+  }
+
+  .waiting-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.85rem;
+    color: var(--dark-grass);
+    line-height: 1.8;
+  }
+
+  .room-code-display {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 2rem;
+    background: var(--cream);
+    border: 4px solid var(--border);
+    padding: 12px 28px;
+    box-shadow: 5px 5px 0 var(--border);
+    letter-spacing: 6px;
+    color: var(--dark-grass);
+  }
+
+  /* INSTRUCTIONS */
+  .instructions {
+    background: var(--cream);
+    border: 2px solid var(--border);
+    padding: 8px 14px;
+    font-size: 1.1rem;
+    max-width: 900px;
+    line-height: 1.6;
+    box-shadow: 2px 2px 0 var(--border);
+    text-align: center;
+  }
+
+  /* Dot bounce for waiting */
+  .dot-bounce::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+
+  @media (max-width: 780px) {
+    :root { --cell: 22px; }
+    .title-main { font-size: 1.8rem; }
+    .grids-wrapper { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <div class="title-block">
+    <h1 class="title-main">🐦 BIRD<br>SEARCH</h1>
+    <div class="subtitle">a 2-player deduction game</div>
+  </div>
+
+  <div class="lobby-card">
+    <h2>Create or Join a Game</h2>
+    <p style="font-size:1.2rem; color:#555; text-align:center">Share a room code with your friend. Both of you enter the same code to play!</p>
+
+    <div class="input-row">
+      <input type="text" id="room-input" placeholder="ROOM CODE" maxlength="8" />
+      <button class="btn btn-green" onclick="joinRoom()">JOIN →</button>
+    </div>
+
+    <div class="divider">or</div>
+
+    <button class="btn btn-sky" style="width:100%" onclick="createRoom()">⚡ CREATE NEW GAME</button>
+
+    <div id="lobby-status" class="status-msg" style="display:none"></div>
+  </div>
+
+  <div style="font-size:1.1rem; color:#666; text-align:center; max-width:400px; line-height:1.7">
+    🐦 Find the <b>hidden bird</b> before your opponent.<br>
+    Click cells to scan. Collect upgrades to extend your range and sharpen your precision.
+  </div>
+</div>
+
+<!-- WAITING -->
+<div id="waiting-screen">
+  <div class="waiting-bird">🐦</div>
+  <div class="waiting-text">WAITING FOR OPPONENT<span class="dot-bounce"></span></div>
+  <div style="font-size:1.3rem; color:#555">Share this room code:</div>
+  <div class="room-code-display" id="waiting-code">????</div>
+  <button class="btn btn-red btn-sm" onclick="leaveGame()">← Leave</button>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div class="game-header">
+    <div class="game-title">🐦 BIRD SEARCH</div>
+    <div id="turn-banner" class="turn-banner">Loading...</div>
+    <div class="header-btns">
+      <button class="btn btn-sky btn-sm" onclick="toggleLabels()">👁 Toggle Labels</button>
+      <button class="btn btn-red btn-sm" onclick="resetGame()">↺ Reset</button>
+      <button class="btn btn-sm" style="background:#eee" onclick="leaveGame()">← Leave</button>
+    </div>
+  </div>
+
+  <div class="player-cards">
+    <div class="player-card" id="p1-card">
+      <div class="player-dot" id="p1-dot" style="background:#87CEEB"></div>
+      <div class="player-info">
+        <div class="player-name">Player 1</div>
+        <div class="player-stats" id="p1-stats">Range: 3 | Precision: 1</div>
+      </div>
+    </div>
+    <div class="player-card" id="p2-card">
+      <div class="player-dot" id="p2-dot" style="background:#DD1717"></div>
+      <div class="player-info">
+        <div class="player-name">Player 2</div>
+        <div class="player-stats" id="p2-stats">Range: 3 | Precision: 1</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="instructions">
+    Click cells to probe your surroundings. <b>Numbers on edges = distance range to nearest target.</b>
+    🌿 = Range Upgrade &nbsp;|&nbsp; 🔬 = Precision Upgrade &nbsp;|&nbsp; 🐦 = The Bird (Win!)
+  </div>
+
+  <div class="grids-wrapper">
+    <div class="grid-panel">
+      <div class="grid-panel-title" id="p1-panel-title">Player 1's View</div>
+      <div class="grid-canvas-wrapper">
+        <canvas id="canvas1" class="grid-canvas" onclick="handleCanvasClick(event, 0)"></canvas>
+      </div>
+    </div>
+    <div class="grid-panel">
+      <div class="grid-panel-title" id="p2-panel-title">Player 2's View</div>
+      <div class="grid-canvas-wrapper">
+        <canvas id="canvas2" class="grid-canvas" onclick="handleCanvasClick(event, 1)"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WINNER OVERLAY -->
+<div id="winner-overlay">
+  <div class="winner-box">
+    <div class="winner-birds">🐦🎉🐦</div>
+    <div class="winner-title" id="winner-title">PLAYER 1 WINS!</div>
+    <div class="winner-sub">Winner Winner Chicken Dinner!</div>
+    <button class="btn btn-green" onclick="resetGame(); document.getElementById('winner-overlay').classList.remove('show')">Play Again</button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────
+const CELL = 34;
+const PADDING = 36;
+const EDGE_PAD = CELL / 4;
+
+// ─── STATE ─────────────────────────────────────────────────
+let ws = null;
+let myPlayerId = null;
+let roomCode = null;
+let gs = null;       // game state from server
+let showLabels = false;
+
+// ─── WEBSOCKET CONNECT ─────────────────────────────────────
+function connect(room) {
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  const host = location.host;
+  ws = new WebSocket(`${protocol}://${host}`);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', roomCode: room }));
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleMessage(msg);
+  };
+
+  ws.onclose = () => {
+    showLobbyStatus('Disconnected from server.', 'error');
+    showLobby();
+  };
+
+  ws.onerror = () => {
+    showLobbyStatus('Connection error.', 'error');
+    showLobby();
+  };
+}
+
+function handleMessage(msg) {
+  if (msg.type === 'joined') {
+    myPlayerId = msg.playerId;
+    roomCode = msg.roomCode;
+  } else if (msg.type === 'waiting') {
+    showWaiting(roomCode);
+  } else if (msg.type === 'state') {
+    gs = msg.gs;
+    myPlayerId = msg.myPlayerId;
+    showGame();
+    renderGame();
+    if (gs.gameOver && gs.winner) {
+      showWinner(gs.winner);
+    }
+  } else if (msg.type === 'error') {
+    showLobbyStatus(msg.message, 'error');
+  } else if (msg.type === 'playerLeft') {
+    alert(msg.message);
+  }
+}
+
+// ─── LOBBY ─────────────────────────────────────────────────
+function createRoom() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('room-input').value = code;
+  joinRoom();
+}
+
+function joinRoom() {
+  const input = document.getElementById('room-input').value.toUpperCase().trim();
+  if (!input) { showLobbyStatus('Enter a room code!', 'error'); return; }
+  roomCode = input;
+  connect(roomCode);
+  showLobbyStatus('Connecting...', 'ok');
+}
+
+function showLobbyStatus(msg, type) {
+  const el = document.getElementById('lobby-status');
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.className = `status-msg status-${type}`;
+}
+
+function leaveGame() {
+  if (ws) ws.close();
+  showLobby();
+}
+
+// ─── SCREEN SWITCHING ──────────────────────────────────────
+function showLobby() {
+  document.getElementById('lobby').style.display = 'flex';
+  document.getElementById('waiting-screen').style.display = 'none';
+  document.getElementById('game').style.display = 'none';
+}
+
+function showWaiting(code) {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('waiting-screen').style.display = 'flex';
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('waiting-code').textContent = code;
+}
+
+function showGame() {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('waiting-screen').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+}
+
+// ─── GAME ACTIONS ──────────────────────────────────────────
+function handleCanvasClick(e, canvasPlayerIndex) {
+  if (!gs || gs.gameOver) return;
+  // Only allow clicks on your own canvas
+  if (canvasPlayerIndex !== myPlayerId) return;
+  if (gs.turn !== myPlayerId) return;
+
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const col = Math.floor((x - PADDING) / CELL);
+  const row = Math.floor((y - PADDING) / CELL);
+
+  if (row >= 0 && row < gs.rows && col >= 0 && col < gs.cols) {
+    ws.send(JSON.stringify({ type: 'click', row, col }));
+  }
+}
+
+function toggleLabels() {
+  ws.send(JSON.stringify({ type: 'toggleLabels' }));
+}
+
+function resetGame() {
+  ws.send(JSON.stringify({ type: 'reset' }));
+}
+
+// ─── RENDERING ─────────────────────────────────────────────
+function renderGame() {
+  if (!gs) return;
+
+  // Update player cards
+  const colors = ['#87CEEB', '#DD1717'];
+  for (let i = 0; i < 2; i++) {
+    const p = gs.players[i];
+    const card = document.getElementById(`p${i+1}-card`);
+    const stats = document.getElementById(`p${i+1}-stats`);
+    stats.textContent = `Range: ${p.range} | Precision: ${Math.max(p.range - p.narrowRange, 1)}`;
+    card.classList.toggle('active-turn', gs.turn === i && !gs.gameOver);
+    // Remove/add badge
+    const oldBadge = card.querySelector('.active-badge');
+    if (oldBadge) oldBadge.remove();
+    if (gs.turn === i && !gs.gameOver) {
+      const badge = document.createElement('div');
+      badge.className = 'active-badge';
+      badge.textContent = 'YOUR TURN';
+      card.appendChild(badge);
+    }
+  }
+
+  // Turn banner
+  const banner = document.getElementById('turn-banner');
+  if (gs.gameOver) {
+    banner.textContent = `GAME OVER - ${gs.winner} WINS!`;
+    banner.style.background = '#f5c542';
+    banner.style.color = '#1a1a1a';
+  } else {
+    const isMyTurn = gs.turn === myPlayerId;
+    banner.textContent = isMyTurn ? '⭐ YOUR TURN' : "⏳ OPPONENT'S TURN";
+    banner.style.background = isMyTurn ? '#4a9e4a' : '#ccc';
+    banner.style.color = isMyTurn ? 'white' : '#555';
+  }
+
+  // Panel titles
+  document.getElementById('p1-panel-title').textContent =
+    myPlayerId === 0 ? "YOUR VIEW (Player 1)" : "Player 1's View";
+  document.getElementById('p2-panel-title').textContent =
+    myPlayerId === 1 ? "YOUR VIEW (Player 2)" : "Player 2's View";
+
+  // Draw both grids
+  drawGrid('canvas1', 0);
+  drawGrid('canvas2', 1);
+}
+
+function drawGrid(canvasId, viewingPlayerId) {
+  const canvas = document.getElementById(canvasId);
+  const rows = gs.rows, cols = gs.cols;
+
+  canvas.width = cols * CELL + 2 * PADDING;
+  canvas.height = rows * CELL + 2 * PADDING;
+
+  // Set cursor based on whether this is the active player's canvas
+  const isActive = viewingPlayerId === myPlayerId && gs.turn === myPlayerId && !gs.gameOver;
+  canvas.className = 'grid-canvas' + (isActive ? '' : ' inactive');
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cellsASet = new Set(gs.cellsA);
+  const cellsBSet = new Set(gs.cellsB);
+  const efs = Math.max(8, Math.floor(CELL * 0.22));
+
+  // Build selected sets
+  const selectedSets = gs.players.map(p => new Set(p.selectedCells));
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x1 = col * CELL + PADDING;
+      const y1 = row * CELL + PADDING;
+      const x2 = x1 + CELL;
+      const y2 = y1 + CELL;
+      const key = `${row},${col}`;
+
+      let drawn = false;
+
+      for (let pi = 0; pi < gs.players.length; pi++) {
+        const player = gs.players[pi];
+        if (selectedSets[pi].has(key)) {
+          const isTarget = cellsASet.has(key) || cellsBSet.has(key) || key === gs.cellC;
+          const showText = (pi === viewingPlayerId) || gs.showLabels;
+
+          ctx.save();
+          if (isTarget) {
+            ctx.globalAlpha = (pi === viewingPlayerId) ? 0.55 : 0.9;
+          } else {
+            ctx.globalAlpha = 1.0;
+          }
+          ctx.fillStyle = player.color;
+          ctx.fillRect(x1, y1, CELL, CELL);
+          ctx.globalAlpha = 1.0;
+          ctx.restore();
+
+          ctx.strokeStyle = '#2d2d2d';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x1, y1, CELL, CELL);
+
+          if (showText && isTarget) {
+            let text = '';
+            if (cellsASet.has(key)) text = '🌿\nRange';
+            else if (cellsBSet.has(key)) text = '🔬\nPrec.';
+            else if (key === gs.cellC) text = '🐦\nBird!';
+            if (text) {
+              const lines = text.split('\n');
+              ctx.fillStyle = '#1a1a1a';
+              ctx.font = `bold ${efs}px VT323, monospace`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(lines[0], (x1+x2)/2, (y1+y2)/2 - efs*0.5);
+              ctx.fillText(lines[1], (x1+x2)/2, (y1+y2)/2 + efs*0.6);
+            }
+          }
+
+          drawn = true;
+          break;
+        }
+      }
+
+      if (!drawn) {
+        // Checkerboard subtle pattern
+        const isLight = (row + col) % 2 === 0;
+        ctx.fillStyle = isLight ? '#f8f9fa' : '#f0f2f4';
+        ctx.fillRect(x1, y1, CELL, CELL);
+        ctx.strokeStyle = '#bbb';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x1, y1, CELL, CELL);
+
+        if (gs.showLabels) {
+          let text = '';
+          if (cellsASet.has(key)) text = '🌿';
+          else if (cellsBSet.has(key)) text = '🔬';
+          else if (key === gs.cellC) text = '🐦';
+          if (text) {
+            ctx.font = `${efs + 4}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, (x1+x2)/2, (y1+y2)/2);
+          }
+        }
+      }
+    }
+  }
+
+  // Draw edge labels for the viewing player
+  const player = gs.players[viewingPlayerId];
+  if (player && player.edgeLabels) {
+    ctx.font = `bold ${efs + 1}px VT323, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const [labelKey, dist] of Object.entries(player.edgeLabels)) {
+      const parts = labelKey.split(',');
+      const row = parseInt(parts[0]);
+      const col = parseInt(parts[1]);
+      const dir = parts[2];
+
+      const x1 = col * CELL + PADDING;
+      const y1 = row * CELL + PADDING;
+      const x2 = x1 + CELL;
+      const y2 = y1 + CELL;
+
+      const cx = (x1 + x2) / 2;
+      const cy = (y1 + y2) / 2;
+
+      let text, lx, ly;
+      const [d0, d1] = dist;
+      const label = d0 === d1 ? `${d0}` : `${d0}→${d1}`;
+
+      if (dir === 'north') { lx = cx; ly = y1 - EDGE_PAD; }
+      else if (dir === 'south') { lx = cx; ly = y2 + EDGE_PAD; }
+      else if (dir === 'west') { lx = x1 - EDGE_PAD; ly = cy; }
+      else { lx = x2 + EDGE_PAD; ly = cy; }
+
+      // Draw pill background
+      const tw = ctx.measureText(label).width + 10;
+      ctx.fillStyle = 'rgba(255,243,200,0.95)';
+      ctx.strokeStyle = '#2d2d2d';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, lx - tw/2, ly - 10, tw, 20, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillText(label, lx, ly + 1);
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function showWinner(winnerName) {
+  document.getElementById('winner-title').textContent = `${winnerName.toUpperCase()} WINS!`;
+  document.getElementById('winner-overlay').classList.add('show');
+}
+
+// Start on lobby
+showLobby();
+</script>
+</body>
+</html>
